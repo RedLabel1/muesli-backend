@@ -1,16 +1,31 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions'
 import * as annaRecetasFaciles from "./api/usecase/annaRecetasFaciles"
-import { FetchError } from 'node-fetch';
+import { Item } from './api/model/item';
 
-const cors = require('cors')({ origin: true });
+ // tslint:disable-next-line:no-import-side-effect
+import './util/extensions'
+
+const cors = require('cors')({ origin: true })
+
+export let queryParam: { 'query': string }
 
 export const search = functions.https.onRequest((request, response) => {
     cors( request, response, async ()=> {
         if (request.method === 'POST') {
-            const queryParam: { 'query': string } = JSON.parse(request.body)
-            annaRecetasFaciles.getItems(queryParam.query)
-            .then(result => response.send(JSON.stringify(annaRecetasFaciles.parseHtml(result))))
-            .catch(error => response.send(JSON.stringify(new FetchError("Error scraping annarecetasfaciles recipes", "531"))))
+            queryParam = JSON.parse(request.body)
+            queryParam.query = queryParam.query.removeDiacritics()
+            annaRecetasFaciles.getItems('1?s=' + queryParam.query, new Array<Item>())
+            .then(result => response.send(JSON.stringify(result)))
+            .catch(() => response.send(JSON.stringify({
+                code: 531,
+                message: "Error scraping annarecetasfaciles recipes"
+            })))
         }
     })
 });
+
+// const call = (): Promise<Array<Item[]>> => {
+//     return Promise.all(
+//         [annaRecetasFaciles.getItems('1?s=' + queryParam.query, new Array<Item>())]
+//     )
+// }

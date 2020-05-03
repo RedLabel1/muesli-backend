@@ -1,24 +1,25 @@
+import { parse } from "node-html-parser"
 import { getHtml } from "../apiService"
 import { AnnaRecetasFacilesItem } from "../model/annaRecetasFacilesItem"
 import { Item } from "../model/Item"
 import { bannedTitles } from "../model/bannedTitles"
-import { parse } from "node-html-parser"
+import { queryParam } from "../.."
 
 
-const baseUrl = 'https://www.annarecetasfaciles.com/'
-let searchAppend = '?s='
+const baseUrl = 'https://www.annarecetasfaciles.com/page/'
 
-export const getItems = async(query?: string): Promise<string> => {
-    return getHtml(baseUrl + searchAppend + query)
+export const getItems = async(query: string, recipes: Array<Item>): Promise<Array<Item>> => {
+    const html = await getHtml(baseUrl + query)
+    return await parseHtml(html, recipes)
 }
 
-export function parseHtml(html: string): Array<Item> {
-    const items = new Array<Item>()
-    const result: { items: Array<Item>, next?: string } = parseItems(html)
-    return items.concat(result.items)
+const parseHtml = async(html: string, recipes: Array<Item>): Promise<Array<Item>> => {
+    const result: { items: Array<Item>, next?: string } = parseItems(html, recipes)
+    if (result.next) { await getItems(result.next, recipes) }
+    return recipes
 }
 
-function parseItems(html: string): { items: Array<Item>, next?: string } {
+function parseItems(html: string, recipes: Array<Item>): { items: Array<Item>, next?: string } {
     const items = new Array<AnnaRecetasFacilesItem>()
     const root = parse(html) as unknown as HTMLElement
     const nodes = root.querySelectorAll('.post-featured-image')
@@ -27,11 +28,7 @@ function parseItems(html: string): { items: Array<Item>, next?: string } {
         const title = (parentNode.firstChild as HTMLElement).getAttribute('title') || undefined
         const thumbnail = (parentNode.firstChild?.firstChild as HTMLElement).getAttribute('src') || undefined
 
-        let nodeContainsSpam = Object.values(bannedTitles).some(spam => {
-            return title?.toLowerCase().includes(spam.toLowerCase())
-        })
-        
-        if (!nodeContainsSpam) {
+        if (title && !containsSpam(title) && contains(title, queryParam.query)) {
             const item = new AnnaRecetasFacilesItem()
             item.detailUrl = detailUrl
             item.title = title
@@ -39,6 +36,20 @@ function parseItems(html: string): { items: Array<Item>, next?: string } {
             items.push(item)
         }
     })
-    const next = root.querySelector('.nextpostlink')?.getAttribute('href') || undefined
-    return { items /*, next */ }
+    recipes.push(...items)
+    const next = root.querySelector('.nextpostslink')?.getAttribute('href') || undefined
+    return { items, next }
+}
+
+function containsSpam(title: string): boolean {
+    const hasSpam = (spam: string) =>
+    title.toLowerCase().removeDiacritics().includes(spam.toLowerCase())
+    return Object.values(bannedTitles).some(hasSpam)
+}
+
+function contains(title: string, keyword: string): boolean {
+    const normalizedTitle = title.toLowerCase().removeDiacritics()
+    const normalizedKeyword = keyword.toLowerCase().removeDiacritics()
+    const includesKeywords = (component: string) => normalizedTitle.includes(component)
+    return normalizedKeyword.split(' ').every(includesKeywords)
 }

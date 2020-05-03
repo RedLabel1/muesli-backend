@@ -1,4 +1,7 @@
 export const bannedTitles = {
     RECETAS: 'recetas',
-    ENSALADAS: 'ensaladas'
+    ENSALADAS: 'ensaladas',
+    ENTRANTES: 'entrantes',
+    OCASIONES: 'ocasiones',
+    CANAPES: 'canapes'
 }
