@@ -1,14 +1,14 @@
 import { parse } from "node-html-parser"
 import { getHtml } from "../apiService"
-import { AnnaRecetasFacilesItem } from "../model/annaRecetasFacilesItem"
+import { RecetasDeRechupeteItem } from "../model/recetasDeRechupeteItem"
 import { Item } from "../model/Item"
 import { bannedTitles } from "../model/bannedTitles"
 import { queryParam } from "../.."
 
 
-const baseUrl = 'https://www.annarecetasfaciles.com/page/'
+const baseUrl = 'https://www.recetasderechupete.com/page/'
 
-export const getItems = async(query: string, recipes: Array<Item>): Promise<Array<Item>> => {
+export const getItems = async(query: string, recipes: Array<Item>): Promise<Array<Item>> => {    
     const html = await getHtml(baseUrl + query)
     return await parseHtml(html, recipes)
 }
@@ -20,19 +20,18 @@ const parseHtml = async(html: string, recipes: Array<Item>): Promise<Array<Item>
 }
 
 const parseItems = (html: string, recipes: Array<Item>): { items: Array<Item>, next?: string } => {
-    const items = new Array<AnnaRecetasFacilesItem>()
+    const items = new Array<RecetasDeRechupeteItem>()
     const root = parse(html) as unknown as HTMLElement
-    const nodes = root.querySelectorAll('.post-featured-image')
+    const nodes = root.querySelectorAll('.itemreceta')
+    
     nodes.forEach((parentNode) => {
-        const prefix = 'https://annarecetasfaciles.com'
-        let detailUrl = (parentNode.querySelector('a') as HTMLElement)?.getAttribute('href') || undefined
-        if (detailUrl) { detailUrl = prefix.concat(detailUrl) }
-        let thumbnail = (parentNode.querySelector('a')?.querySelector('img') as HTMLElement)?.getAttribute('src') || undefined
-        if (thumbnail) { thumbnail = prefix.concat(thumbnail) }
-        const title = (parentNode.querySelector('a') as HTMLElement)?.getAttribute('title') || undefined
+        
+        const detailUrl = (parentNode.querySelector('a') as HTMLElement)?.getAttribute('href') || undefined
+        const thumbnail = (parentNode.querySelector('a')?.querySelector('img') as HTMLElement)?.getAttribute('src') || undefined
+        const title = (parentNode.querySelector('a')?.querySelector('h2') as HTMLElement)?.innerHTML || undefined
 
         if (title && !containsSpam(title) && contains(title, queryParam.query)) {
-            const item = new AnnaRecetasFacilesItem()
+            const item = new RecetasDeRechupeteItem()
             item.detailUrl = detailUrl
             item.title = title
             item.thumbnail = thumbnail
@@ -40,7 +39,7 @@ const parseItems = (html: string, recipes: Array<Item>): { items: Array<Item>, n
         }
     })
     recipes.push(...items)
-    const next = root.querySelector('.nextpostslink')?.getAttribute('href') || undefined
+    const next = root.querySelector('.next.page-numbers')?.getAttribute('href')?.replace(baseUrl, '') || undefined
     return { items, next }
 }
 
