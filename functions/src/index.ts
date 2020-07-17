@@ -66,6 +66,13 @@ const getCachedRecipes = async (searchString: string) => {
     return await admin.firestore().collection('searches').where('query', '==', searchString).get()
 }
 
+const saveResult = async (searchString: string, searchResult: Array<Item>) => {
+    return await admin.firestore().collection('searches').add({
+        query: searchString,
+        items: searchResult.map((item) => Object.assign({}, item))
+    })
+}
+
 const parseCachedRecipes = (querySnapshot: FirebaseFirestore.QuerySnapshot) => {
     return querySnapshot.docs[0].data() as { query: string, items: Array<Item> }
 }
@@ -79,11 +86,4 @@ const getAllRecipes = () => {
 
 const mergeRecipes = (items: Array<Array<Item>>) => {
     return ([] as Array<Item>).concat(...items)
-}
-
-const saveResult = async (searchString: string, searchResult: Array<Item>) => {
-    return await admin.firestore().collection('searches').add({
-        query: searchString,
-        items: searchResult.map((item) => Object.assign({}, item))
-    })
 }
