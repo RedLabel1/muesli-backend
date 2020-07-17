@@ -42,7 +42,7 @@ export const search = functions.https.onRequest((request, response) => {
     })
 })
 
-export const cleanup = functions.pubsub.schedule('every monday 03:00').timeZone('Europe/Madrid').onRun((context) => {
+export const cleanup = functions.pubsub.schedule('every day 3:00').timeZone('Europe/Madrid').onRun((context) => {
     const oneMonth = 1000 * 60 * 60 * 24 * 30
     const deletions: Array<Promise<FirebaseFirestore.WriteResult>> = []
     admin.firestore().collection('searches').get()
