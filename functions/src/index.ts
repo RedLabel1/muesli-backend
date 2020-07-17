@@ -42,6 +42,26 @@ export const search = functions.https.onRequest((request, response) => {
     })
 })
 
+export const cleanup = functions.pubsub.schedule('every monday 03:00').timeZone('Europe/Madrid').onRun((context) => {
+    const oneMonth = 1000 * 60 * 60 * 24 * 30
+    const deletions: Array<Promise<FirebaseFirestore.WriteResult>> = []
+    admin.firestore().collection('searches').get()
+    .then(snapshot => {
+        snapshot.docs.forEach(item => {
+            if (new Date().getTime() > item.createTime.toDate().getTime() + oneMonth ) {
+                deletions.push(deleteDocument(item))
+            }
+        })
+        return Promise.all(deletions)
+    })
+    .catch()
+    return null
+})
+
+const deleteDocument = async (document: FirebaseFirestore.DocumentSnapshot) => {
+    return await document.ref.delete()
+}
+
 const getCachedRecipes = async (searchString: string) => {
     return await admin.firestore().collection('searches').where('query', '==', searchString).get()
 }
@@ -64,7 +84,6 @@ const mergeRecipes = (items: Array<Array<Item>>) => {
 const saveResult = async (searchString: string, searchResult: Array<Item>) => {
     return await admin.firestore().collection('searches').add({
         query: searchString,
-        items: searchResult.map((item) => Object.assign({}, item)),
-        timestamp: new Date()
+        items: searchResult.map((item) => Object.assign({}, item))
     })
 }
