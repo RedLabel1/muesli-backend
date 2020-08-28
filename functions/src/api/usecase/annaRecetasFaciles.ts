@@ -31,7 +31,7 @@ const parseItems = (html: string, recipes: Array<Item>): { items: Array<Item>, n
         if (thumbnail) { thumbnail = prefix.concat(thumbnail) }
         const title = (parentNode.querySelector('a') as HTMLElement)?.getAttribute('title') || undefined
 
-        if (title && !containsSpam(title) && contains(title, queryParam.query)) {
+        if (title && !containsSpam(title) && contains(title, queryParam)) {
             const item = new AnnaRecetasFacilesItem()
             item.detailUrl = detailUrl
             item.title = title

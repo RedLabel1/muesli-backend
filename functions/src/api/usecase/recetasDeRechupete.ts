@@ -30,7 +30,7 @@ const parseItems = (html: string, recipes: Array<Item>): { items: Array<Item>, n
         const thumbnail = (parentNode.querySelector('a')?.querySelector('img') as HTMLElement)?.getAttribute('src') || undefined
         const title = (parentNode.querySelector('a')?.querySelector('h2') as HTMLElement)?.innerHTML || undefined
 
-        if (title && !containsSpam(title) && contains(title, queryParam.query)) {
+        if (title && !containsSpam(title) && contains(title, queryParam)) {
             const item = new RecetasDeRechupeteItem()
             item.detailUrl = detailUrl
             item.title = title

@@ -10,33 +10,33 @@ const cors = require('cors')({ origin: true })
 
 admin.initializeApp()
 
-export let queryParam: { 'query': string }
+export let queryParam: string
 
-export const search = functions.https.onRequest((request, response) => {
+export const recipes = functions.https.onRequest((request, response) => {
     cors( request, response, async ()=> {
         if (request.method === 'POST') {
-            queryParam = JSON.parse(request.body)
-            queryParam.query = queryParam.query.removeDiacritics()
+            let body: { query : string } = request.body
+            queryParam = body.query.removeDiacritics()
             
-            getCachedRecipes(queryParam.query)
+            getCachedRecipes(queryParam)
             .then(querySnapshot => response.send(
                 JSON.stringify(parseCachedRecipes(querySnapshot)))
             )
             .catch(() =>
                 getAllRecipes()
                 .then(result => {
-                    const recipes = mergeRecipes(result)
-                    saveResult(queryParam.query, recipes)
-                    .then(() => response.send(JSON.stringify(recipes)))
-                    .catch(() => response.send(JSON.stringify({
-                        code: 530,
-                        message: `Error saving the recipes for query string: ${queryParam.query}`
-                    })))
+                    const resultRecipes = mergeRecipes(result)
+                    saveResult(queryParam, resultRecipes)
+                    .then(() => response.send(JSON.stringify(resultRecipes)))
+                    .catch(() => {
+                        response.statusMessage = `Error saving the recipes for query string: ${queryParam}`
+                        response.status(430).end()
+                    })
                 })
-                .catch(() => response.send(JSON.stringify({
-                    code: 531,
-                    message: 'Error scraping the web for recipes'
-                })))
+                .catch(() => {
+                    response.statusMessage = 'Error scraping the web for recipes'
+                    response.status(431).end()
+                })
             )
         }
     })
@@ -79,8 +79,8 @@ const parseCachedRecipes = (querySnapshot: FirebaseFirestore.QuerySnapshot) => {
 
 const getAllRecipes = () => {
     return Promise.all([
-        annaRecetasFaciles.getItems('1?s=' + queryParam.query, new Array<Item>()),
-        recetasDeRechupete.getItems('1?s=' + queryParam.query, new Array<Item>())
+        annaRecetasFaciles.getItems('1?s=' + queryParam, new Array<Item>()),
+        recetasDeRechupete.getItems('1?s=' + queryParam, new Array<Item>())
     ])
 }
 
